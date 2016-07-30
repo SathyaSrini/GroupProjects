@@ -1,0 +1,306 @@
+/**
+ * Created by sags on 3/16/16.
+ */
+/** @author rbk
+ *  Binary search tree (nonrecursive version)
+ *  Ver 1.1: Bug fixed - parent of child updated after removeOne
+ **/
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.*;
+
+public class AVL<T extends Comparable<? super T>> {
+    class Entry<T> {
+        T element;
+        int height;
+        Entry<T> left, right, parent;
+
+        Entry(T x, Entry<T> l, Entry<T> r, Entry<T> p) {
+            element = x;
+            left = l;
+            right = r;
+            parent = p;
+            height=0;
+        }
+    }
+
+    Entry<T> root;
+    int size;
+
+    AVL() {
+        root = null;
+        size = 0;
+    }
+
+    //Create a BST from a sorted list
+    AVL(ArrayList<T> list){
+        sortListtoBST(list,0,list.size()-1);
+    }
+
+    public T next(ListIterator<T> it){
+        if(it.hasNext())
+            return it.next();
+        else
+            return null;
+    }
+
+    T sortListtoBST(ArrayList<T> list,int start,int end){
+        if(start>=end) return null;
+        int mid=(end+start)/2;
+        this.add(list.get(mid));
+        sortListtoBST(list,start,mid);
+        sortListtoBST(list,mid+1,end);
+        return null;
+    }
+
+
+    //Level order traversal in BST
+    public Comparable[] levelOrderArray(){
+        Queue<Entry<T>> level_order=new ArrayDeque<>();
+        level_order.add(this.root);
+        Comparable[] arr= new Comparable[this.size];
+        int index=0;
+        while (!level_order.isEmpty()){
+            Entry<T> temp=level_order.poll();
+            arr[index++]=  temp.height;
+            if (temp.left!=null)
+                level_order.add(temp.left);
+            if(temp.right!=null)
+                level_order.add(temp.right);
+        }
+        return (Comparable[]) arr;
+    }
+
+    // Find x in subtree rooted at node t.  Returns node where search ends.
+    Entry<T> find(Entry<T> t, T x) {
+        Entry<T> pre = t;
+        while(t != null) {
+            pre = t;
+            int cmp = x.compareTo(t.element);
+            if(cmp == 0) {
+                return t;
+            } else if(cmp < 0) {
+                t = t.left;
+            } else {
+                t = t.right;
+            }
+        }
+        return pre;
+    }
+
+    // Is x contained in tree?
+    public boolean contains(T x) {
+        Entry<T> node = find(root, x);
+        return node == null ? false : x.equals(node.element);
+    }
+
+    public boolean verifyAVLTree(){
+        height(root);
+        Comparable[] check_avl=levelOrderArray();
+        Comparable[] check_order=toArray();
+        for(int i=0;i<check_avl.length;i++){
+            if (check_avl.length==check_order.length){
+                if (check_avl[i].compareTo(1)<=0 && check_order[i]!=null && i>0){
+                    if (check_order[i-1].compareTo(check_order[i])<=0)
+                        continue;
+                    else
+                        return false;
+                }
+                else if(check_avl[i].compareTo(1)>1)
+                    return false;
+                else if(check_order[i]==null)
+                    return false;
+            }
+            else
+                return false;
+        }
+        return true;
+    }
+    
+    public int height(Entry<T> x){
+        if(x==null) return 0;
+        return x.height=(1+Math.max(height(x.left),height(x.right)));
+    }
+
+    Entry<T> case1RightRotate(Entry<T> parent){
+        Entry<T> child=parent.left;
+        Entry<T> remaining=child.right;
+        Entry<T> grandpa=parent.parent;
+
+        child.right=parent;
+        parent.left=remaining;
+
+        child.parent=grandpa;
+        if (grandpa.left==parent)
+            grandpa.left=child;
+        else
+            grandpa.right=child;
+
+        parent.height=height(parent.left)-height(parent.right);
+        child.height=height(parent.left)-height(parent.right);
+
+        return child;
+    }
+
+    Entry<T> case2LeftRotate(Entry<T> parent){
+        Entry<T> child=parent.right;
+        Entry<T> remaining=child.left;
+        Entry<T> grandpa=parent.parent;
+
+        child.left=parent;
+        parent.right=remaining;
+
+        child.parent=grandpa;
+        if (grandpa.left==parent)
+            grandpa.left=child;
+        else
+            grandpa.right=child;
+
+        parent.height=height(parent.left)-height(parent.right);
+        child.height=height(parent.left)-height(parent.right);
+
+        return child;
+    }
+
+    void ensureBalance(Entry<T> child,T x){
+        while(child!=null){
+            child.height=height(child.left)-height(child.right);
+            //left-left
+            //case1
+            if (child.height>1 && x.compareTo(child.element)<1)
+            {
+                case1RightRotate(child);
+            }
+            //case2
+            else if(child.height<-1 && x.compareTo(child.element)>1)
+            {
+                case2LeftRotate(child);
+            }
+            //case 3
+            else if(child.height>1 && x.compareTo(child.element)>1)
+            {
+                child.left=case2LeftRotate(child.left);
+                case1RightRotate(child);
+            }
+            //case4
+            else if(child.height<-1 && x.compareTo(child.element)<1)
+            {
+                child.right=case1RightRotate(child.right);
+                case2LeftRotate(child);
+            }
+            child=child.parent;
+        }
+        
+    }
+    // Add x to tree.  If tree contains a node with same key, replace element by x.
+    // Returns true if x is a new element added to tree.
+    public Entry<T> add(T x) {
+        if(size == 0) {
+            root = new Entry<>(x, null, null, null);
+        } else {
+            Entry<T> node = find(root, x);
+            int cmp = x.compareTo(node.element);
+            if(cmp == 0) {
+                node.element = x;
+                node.height=height(node);
+                return root;
+            }
+            Entry<T> newNode = new Entry<>(x, null, null, node);
+            if(cmp < 0) {
+                node.left = newNode;
+                node.left.height=height(node.left);
+                ensureBalance(node.parent,x);
+            } else {
+                node.right = newNode;
+                node.right.height=height(node.right);
+                ensureBalance(node.parent,x);
+            }
+        }
+        size++;
+        return root;
+    }
+
+    public static void main(String[] args) throws FileNotFoundException {
+        //BST<Integer> t = new BST<>();
+        AVL<Integer> t=new AVL<>();
+
+        Scanner in ;
+        if (args.length > 0) {
+            File inputFile = new File(args[0]);
+            in = new Scanner(inputFile);
+        } else {
+	    System.out.println("File not given, enter the numbers for AVL Tree:");	
+            in = new Scanner(System.in);
+        }
+
+        ArrayList<Integer> l=new ArrayList<>();
+
+
+        while(in.hasNext()) {
+            int x = in.nextInt();
+            if(x > 0) {
+                System.out.print("Add " + x + " : ");
+                t.add(x);
+                t.printTree();
+            } else {
+                boolean ans=t.verifyAVLTree();
+                if(ans)
+                    System.out.println("Verified AVL Tree is valid");
+                else
+                    System.out.println("Verified AVL Tree is not valid");
+                return;
+            }
+        }
+    }
+
+    //to print the level order
+    public static void printlevelOrder(Comparable[] arr){
+        System.out.println("Level order traversal is :");
+        for(Comparable ele:arr)
+            System.out.println(ele.toString());
+    }
+    // Create an array with the elements using in-order traversal of tree
+    public Comparable[] toArray() {
+        Comparable[] arr = new Comparable[size];
+        inOrder(root, arr, 0);
+        return arr;
+    }
+
+    // Recursive in-order traversal of tree rooted at "node".
+    // "index" is next element of array to be written.
+    // Returns index of next entry of arr to be written.
+    int inOrder(Entry<T> node, Comparable[] arr, int index) {
+        if(node != null) {
+            index = inOrder(node.left, arr, index);
+            arr[index++] = node.element;
+            index = inOrder(node.right, arr, index);
+        }
+        return index;
+    }
+
+    public void printTree() {
+        System.out.print("[" + size + "]");
+        printTree(root);
+        System.out.println();
+    }
+
+    // Inorder traversal of tree
+    void printTree(Entry<T> node) {
+        if(node != null) {
+            printTree(node.left);
+            System.out.print(" " + node.element);
+            printTree(node.right);
+        }
+    }
+
+    // Preorder traversal of tree
+    void preTree(Entry<T> node) {
+        if(node != null) {
+            System.out.print(" " + node.element);
+            preTree(node.left);
+            preTree(node.right);
+        }
+    }
+}
+
