@@ -1,2 +1,2 @@
 # GroupProjects
-Contain my work in working with a team of superstars
+My work in a team of superstars
