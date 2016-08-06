@@ -1,2 +1,2 @@
 # GroupProjects
-My work in a team of superstars
+My work with a team of Super'★'s
